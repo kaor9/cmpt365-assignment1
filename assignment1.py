@@ -20,6 +20,7 @@ def parse_bmp_file():
     bmp_bytes = f.read()
     print(int.from_bytes(bmp_bytes[0:2], 'little'))
 
+# get functions
 def get_file_type(self, bmp_bytes):
   return int.from_bytes(bmp_bytes[0:2], 'little')
 
