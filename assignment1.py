@@ -54,6 +54,11 @@ def parse_bmp_file():
   bits_per_pixel.config(text=f"{get_bits_per_pixel(bmp_bytes)} bits per pixel")
 
 def display_image():
+  # https://stackoverflow.com/questions/65603857/how-to-display-an-image-in-tkinter-from-a-byte-array
+  # https://stackoverflow.com/questions/10133856/how-to-add-an-image-in-tkinter
+  # https://canvas.sfu.ca/courses/92560/discussion_topics/2014656 
+  # https://pillow.readthedocs.io/en/stable/reference/Image.html check Image.frombytes or fromarray
+  
   return
 
 # Initialize window
@@ -71,8 +76,6 @@ tk.Button(root, text="Browse", command=browse_bmp_file).grid(row=0, column=2, pa
 tk.Button(root, text="Parse", command=parse_bmp_file).grid(row=1, column=1)
 
 # Display Image (Row 2)
-# https://stackoverflow.com/questions/10133856/how-to-add-an-image-in-tkinter
-# https://canvas.sfu.ca/courses/92560/discussion_topics/2014656 
 img = ImageTk.PhotoImage(Image.open("./PA1_Sample_Input/BIOS.bmp"))
 tk.Label(root, image=img).grid(row=2, column=1, padx=10, pady=10)
 
