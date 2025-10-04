@@ -75,7 +75,7 @@ def parse_bmp_file():
     image_width.config(text="")
     image_height.config(text="")
     bits_per_pixel.config(text="")
-    return # do some error handling later!
+    return
   
   display_image(bmp_bytes)
   file_size.config(text=f"{get_file_size(bmp_bytes)} bytes")
