@@ -70,6 +70,7 @@ def parse_bmp_file():
   if get_file_type(bmp_bytes) != 19778:
     file_path_entry.delete(0, tk.END)
     file_path_entry.insert(0, "Invalid file, please insert a .bmp file.")
+    image.delete("all")
     file_size.config(text="")
     image_width.config(text="")
     image_height.config(text="")
