@@ -3,8 +3,17 @@
 
 import tkinter as tk
 from tkinter import filedialog
-from PIL import Image, ImageTk, ImageEnhance
+from PIL import Image, ImageTk
 import numpy as np
+import time
+
+# -- Variables -- 
+
+start_time = 0
+end_time = 0
+total_time = 0
+original_size = 0
+compressed_size = 0
 
 # -- function definitions -- 
 
@@ -77,6 +86,9 @@ def parse_bmp_file():
     bits_per_pixel.config(text="")
     return
   
+  #track original file size for compression
+  original_size = get_file_size(bmp_bytes)
+
   display_image(bmp_bytes)
   file_size.config(text=f"{get_file_size(bmp_bytes)} bytes")
   image_width.config(text=f"{get_file_width(bmp_bytes)} px")
@@ -208,6 +220,9 @@ def display_image(bmp_bytes):
   y = (c_height - height) // 2
   image.create_image(x, y, anchor=tk.NW, image=img)
     
+def compress():
+  start_time = time.perf_counter()
+  return
 
 # -- layout and main loop -- 
 
@@ -255,25 +270,29 @@ green_button.grid(row=4, column=1, padx=10, pady=10)
 blue_button = tk.Checkbutton(root, text="Blue", variable=blue_channel)
 blue_button.grid(row=4, column=2, padx=10, pady=10)
 
-# File size (Row 4)
+# File size (Row 5)
 tk.Label(root, text="File size:").grid(row=5, column=0, padx=10, pady=10)
 file_size = tk.Label(root, text="")
 file_size.grid(row=5, column=1, padx=10, pady=10)
 
-# Image width (Row 5)
+# Image width (Row 6)
 tk.Label(root, text="Image width:").grid(row=6, column=0, padx=10, pady=10)
 image_width = tk.Label(root, text="")
 image_width.grid(row=6, column=1, padx=10, pady=10)
 
-# Image Height (Row 6)
+# Image Height (Row 7)
 tk.Label(root, text="Image height:").grid(row=7, column=0, padx=10, pady=10)
 image_height = tk.Label(root, text="")
 image_height.grid(row=7, column=1, padx=10, pady=10)
 
-# Bits per pixel (Row 7)
+# Bits per pixel (Row 8)
 tk.Label(root, text="Bits per pixel:").grid(row=8, column=0, padx=10, pady=10)
 bits_per_pixel = tk.Label(root, text="")
 bits_per_pixel.grid(row=8, column=1, padx=10, pady=10)
+
+# Compression button (Row 9)
+tk.Button(root, text="Compress", command="").grid(row=9, column=1, padx=10, pady=10)
+
 
 
 root.mainloop()
