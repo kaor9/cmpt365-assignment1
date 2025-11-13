@@ -9,6 +9,7 @@ import time
 
 # -- Variables -- 
 
+bmp_bytes_global = 0b0
 start_time = 0
 end_time = 0
 total_time = 0
@@ -88,6 +89,7 @@ def parse_bmp_file():
   
   #track original file size for compression
   original_size = get_file_size(bmp_bytes)
+  bmp_bytes_global = bmp_bytes
 
   display_image(bmp_bytes)
   file_size.config(text=f"{get_file_size(bmp_bytes)} bytes")
@@ -220,8 +222,13 @@ def display_image(bmp_bytes):
   y = (c_height - height) // 2
   image.create_image(x, y, anchor=tk.NW, image=img)
     
-def compress():
+def compress(bmp_bytes):
   start_time = time.perf_counter()
+
+  # create header
+
+  end_time = time.perf_counter()
+  total_time = start_time - end_time
   return
 
 # -- layout and main loop -- 
