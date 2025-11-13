@@ -7,6 +7,14 @@ from PIL import Image, ImageTk
 import numpy as np
 import time
 
+# -- Classes --
+class Node:
+  def __init__(self, symbol, weight, left=None, right=None):
+    self.symbol = symbol
+    self.weight = weight
+    self.left = left
+    self.right = right
+
 # -- Global Variables -- 
 
 bmp_bytes_global = 0
@@ -226,12 +234,22 @@ def display_image(bmp_bytes):
     
 def compress(bmp_bytes):
   # 0 is nothing, if 0 do not compress the image
-  if bmp_bytes_global == 0:
-    return 
-  
   start_time = time.perf_counter()
 
-  
+  if bmp_bytes_global == 0:
+    return 
+
+  bpp = get_bits_per_pixel(bmp_bytes)
+  # alg:
+  # init: put symbols in a sorted list according to their frequency count
+  node_lst = []
+  if bpp == 1:
+    return
+
+  # repeat:
+  # pick two symbols with lowest frequency counts and form a subtree with both symbols as children.
+  # the parent node should be assigned to the sum of the two symbols, and place the parent back into the list
+  # delete the two children that were used for the list
 
 
   end_time = time.perf_counter()
@@ -298,27 +316,27 @@ green_button.grid(row=4, column=1, padx=10, pady=10)
 blue_button = tk.Checkbutton(second_frame, text="Blue", variable=blue_channel)
 blue_button.grid(row=4, column=2, padx=10, pady=10)
 
+# Original File Metadata
 # File size (Row 5)
 tk.Label(second_frame, text="File size:").grid(row=5, column=0, padx=10, pady=10)
 file_size = tk.Label(second_frame, text="")
 file_size.grid(row=5, column=1, padx=10, pady=10)
-
 # Image width (Row 6)
 tk.Label(second_frame, text="Image width:").grid(row=6, column=0, padx=10, pady=10)
 image_width = tk.Label(second_frame, text="")
 image_width.grid(row=6, column=1, padx=10, pady=10)
-
 # Image Height (Row 7)
 tk.Label(second_frame, text="Image height:").grid(row=7, column=0, padx=10, pady=10)
 image_height = tk.Label(second_frame, text="")
 image_height.grid(row=7, column=1, padx=10, pady=10)
-
 # Bits per pixel (Row 8)
 tk.Label(second_frame, text="Bits per pixel:").grid(row=8, column=0, padx=10, pady=10)
 bits_per_pixel = tk.Label(second_frame, text="")
 bits_per_pixel.grid(row=8, column=1, padx=10, pady=10)
 
+# Compression Data Comparison
 # Compression button (Row 9)
 tk.Button(second_frame, text="Compress", command="").grid(row=9, column=1, padx=10, pady=10)
+
 
 root.mainloop()
