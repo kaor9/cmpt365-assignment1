@@ -1,23 +1,15 @@
-# reformat_program.py
+# assignment1.py
 # By James Cam, 301562474
 
 import tkinter as tk
-from tkinter import filedialog, ttk
+from tkinter import filedialog
 from PIL import Image, ImageTk
 import numpy as np
 import time
 
-# -- Classes --
-class Node:
-  def __init__(self, symbol, weight, left=None, right=None):
-    self.symbol = symbol
-    self.weight = weight
-    self.left = left
-    self.right = right
+# -- Variables -- 
 
-# -- Global Variables -- 
-
-bmp_bytes_global = 0
+bmp_bytes_global = 0b0
 start_time = 0
 end_time = 0
 total_time = 0
@@ -68,39 +60,33 @@ def get_color_table(bmp_bytes, bpp):
   
   return color_table
 
-def browse_file():
+
+# other functions
+def browse_bmp_file():
   # we are only alowing the selections of .bmp files when pressing button. 
   filepath = filedialog.askopenfilename(title="Select a .bmp file", filetypes=[("BMP files", "*.bmp")])
   if filepath:
     file_path_entry.delete(0, tk.END)
     file_path_entry.insert(0, filepath)
 
-def open_file():
-  # checks the header of a .bmp and .cmpt365 file to choose how to handle it
+def parse_bmp_file():
   if (file_path_entry.get() == ""):
     return # if no file is there currently, just dont do anything
   
   with open(f"{file_path_entry.get()}", "rb") as f:
     bmp_bytes = f.read()
 
-  tmp_file_type = get_file_type(bmp_bytes)
-  if tmp_file_type == 19778:
-    bmp_bytes_global = bmp_bytes
-    parse_bmp_file(bmp_bytes)
-  elif tmp_file_type == 123: #change value later for .cmpt365
-    return #again change
-  else:
-    bmp_bytes_global = 0
+  # if the first two bytes dont equal to 19778 (BM in little endian) let user know
+  if get_file_type(bmp_bytes) != 19778:
     file_path_entry.delete(0, tk.END)
-    file_path_entry.insert(0, "Invalid file, please insert a .bmp or .cmpt365 file.")
+    file_path_entry.insert(0, "Invalid file, please insert a .bmp file.")
     image.delete("all")
     file_size.config(text="")
     image_width.config(text="")
     image_height.config(text="")
     bits_per_pixel.config(text="")
     return
-
-def parse_bmp_file(bmp_bytes):
+  
   #track original file size for compression
   original_size = get_file_size(bmp_bytes)
   bmp_bytes_global = bmp_bytes
@@ -112,6 +98,9 @@ def parse_bmp_file(bmp_bytes):
   bits_per_pixel.config(text=f"{get_bits_per_pixel(bmp_bytes)} bits per pixel")
 
 def display_image(bmp_bytes):
+  # This function will for sure be redone in future iterations in the case that we are extending
+  # the current functionality of the current program. This is nightmare code written at 12am..
+
   global img # without it being global, image will not show
   bpp = get_bits_per_pixel(bmp_bytes)
   width = get_file_width(bmp_bytes)
@@ -173,6 +162,7 @@ def display_image(bmp_bytes):
     image.config(image="")
     return
 
+
   # change size based on slider:
   scale = scale_slider.get()/100
   if scale < 1.0:
@@ -233,110 +223,83 @@ def display_image(bmp_bytes):
   image.create_image(x, y, anchor=tk.NW, image=img)
     
 def compress(bmp_bytes):
-  # 0 is nothing, if 0 do not compress the image
   start_time = time.perf_counter()
 
-  if bmp_bytes_global == 0:
-    return 
-
-  bpp = get_bits_per_pixel(bmp_bytes)
-  # alg:
-  # init: put symbols in a sorted list according to their frequency count
-  node_lst = []
-  if bpp == 1:
-    return
-
-  # repeat:
-  # pick two symbols with lowest frequency counts and form a subtree with both symbols as children.
-  # the parent node should be assigned to the sum of the two symbols, and place the parent back into the list
-  # delete the two children that were used for the list
-
+  # create header
 
   end_time = time.perf_counter()
   total_time = start_time - end_time
   return
 
-
 # -- layout and main loop -- 
 
 
-# Initialize root
+# Initialize window
 root = tk.Tk()
 root.title('Assignment 1')
 root.geometry('1000x850')
 
-# Create scrollable frame, (works only by clicking or hovering it then using scrollwheel)
-# https://www.youtube.com/watch?v=0WafQCaok6g for scrollable
-main_frame = tk.Frame(root)
-main_frame.pack(fill=tk.BOTH, expand=1)
-my_canvas = tk.Canvas(main_frame)
-my_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
-my_scroll = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=my_canvas.yview)
-my_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-my_canvas.configure(yscrollcommand=my_scroll.set)
-my_canvas.bind('<Configure>', lambda e: my_canvas.configure(scrollregion = my_canvas.bbox("all")))
-second_frame = tk.Frame(my_canvas)
-my_canvas.create_window((0,0), window=second_frame, anchor="nw")
-
-
 # Entry Section (Row 0)
-tk.Label(second_frame, text="File path:").grid(row=0, column=0, padx=10, pady=10)
-file_path_entry = tk.Entry(second_frame, width=80)
+tk.Label(root, text="File path:").grid(row=0, column=0, padx=10, pady=10)
+file_path_entry = tk.Entry(root, width=80)
 file_path_entry.grid(row=0, column=1, padx=10, pady=10) 
-tk.Button(second_frame, text="Browse", command=browse_file).grid(row=0, column=2, padx=10, pady=10)
+tk.Button(root, text="Browse", command=browse_bmp_file).grid(row=0, column=2, padx=10, pady=10)
 
 # Parsing Button (Row 1)
-tk.Button(second_frame, text="Display", command=open_file).grid(row=1, column=1)
+tk.Button(root, text="Parse", command=parse_bmp_file).grid(row=1, column=1)
 
 # Sliders (Row 2)
 # for brightness
-brightness_slider = tk.Scale(second_frame, from_=0, to=100, orient=tk.HORIZONTAL, label="Brightness %", 
-                             command=lambda x: open_file()) # lazy move on me i know
+brightness_slider = tk.Scale(root, from_=0, to=100, orient=tk.HORIZONTAL, label="Brightness %", 
+                             command=lambda x: parse_bmp_file()) # lazy move on me i know
 brightness_slider.grid(row=2, column=0, padx=10, pady=10)
 brightness_slider.set(100)
 
 # for scale
-scale_slider = tk.Scale(second_frame, from_=0, to=100, orient=tk.HORIZONTAL, label="Scale",
-                        command=lambda x: open_file()) # again very lazy
+scale_slider = tk.Scale(root, from_=0, to=100, orient=tk.HORIZONTAL, label="Scale",
+                        command=lambda x: parse_bmp_file()) # again very lazy
 scale_slider.grid(row=2, column=2, padx=10, pady=10)
 scale_slider.set(100)
 
 # Display Image (Row 3)
-image = tk.Canvas(second_frame, width=600, height=450, bg="white")
+image = tk.Canvas(root, width=600, height=450, bg="white")
 image.grid(row=3, column=1, padx=10, pady=10)
+
 
 # RGB Buttons (Row 4)
 red_channel = tk.BooleanVar(value=True)
 green_channel = tk.BooleanVar(value=True)
 blue_channel = tk.BooleanVar(value=True)
-red_button = tk.Checkbutton(second_frame, text="Red", variable=red_channel)
+red_button = tk.Checkbutton(root, text="Red", variable=red_channel)
 red_button.grid(row=4, column=0, padx=10, pady=10)
-green_button = tk.Checkbutton(second_frame, text="Green", variable=green_channel)
+green_button = tk.Checkbutton(root, text="Green", variable=green_channel)
 green_button.grid(row=4, column=1, padx=10, pady=10)
-blue_button = tk.Checkbutton(second_frame, text="Blue", variable=blue_channel)
+blue_button = tk.Checkbutton(root, text="Blue", variable=blue_channel)
 blue_button.grid(row=4, column=2, padx=10, pady=10)
 
-# Original File Metadata
 # File size (Row 5)
-tk.Label(second_frame, text="File size:").grid(row=5, column=0, padx=10, pady=10)
-file_size = tk.Label(second_frame, text="")
+tk.Label(root, text="File size:").grid(row=5, column=0, padx=10, pady=10)
+file_size = tk.Label(root, text="")
 file_size.grid(row=5, column=1, padx=10, pady=10)
+
 # Image width (Row 6)
-tk.Label(second_frame, text="Image width:").grid(row=6, column=0, padx=10, pady=10)
-image_width = tk.Label(second_frame, text="")
+tk.Label(root, text="Image width:").grid(row=6, column=0, padx=10, pady=10)
+image_width = tk.Label(root, text="")
 image_width.grid(row=6, column=1, padx=10, pady=10)
+
 # Image Height (Row 7)
-tk.Label(second_frame, text="Image height:").grid(row=7, column=0, padx=10, pady=10)
-image_height = tk.Label(second_frame, text="")
+tk.Label(root, text="Image height:").grid(row=7, column=0, padx=10, pady=10)
+image_height = tk.Label(root, text="")
 image_height.grid(row=7, column=1, padx=10, pady=10)
+
 # Bits per pixel (Row 8)
-tk.Label(second_frame, text="Bits per pixel:").grid(row=8, column=0, padx=10, pady=10)
-bits_per_pixel = tk.Label(second_frame, text="")
+tk.Label(root, text="Bits per pixel:").grid(row=8, column=0, padx=10, pady=10)
+bits_per_pixel = tk.Label(root, text="")
 bits_per_pixel.grid(row=8, column=1, padx=10, pady=10)
 
-# Compression Data Comparison
 # Compression button (Row 9)
-tk.Button(second_frame, text="Compress", command="").grid(row=9, column=1, padx=10, pady=10)
+tk.Button(root, text="Compress", command="").grid(row=9, column=1, padx=10, pady=10)
+
 
 
 root.mainloop()
