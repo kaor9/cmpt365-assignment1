@@ -239,17 +239,17 @@ def compress(bmp_bytes):
   if bmp_bytes_global == 0:
     return 
 
-  bpp = get_bits_per_pixel(bmp_bytes)
+  data_offset = get_data_offset(bmp_bytes)
+  header = bmp_bytes[:data_offset]
+  pixels = bmp_bytes[data_offset:]
   # alg:
   # init: put symbols in a sorted list according to their frequency count
-  node_lst = []
-  if bpp == 1:
-    return
-
   # repeat:
   # pick two symbols with lowest frequency counts and form a subtree with both symbols as children.
   # the parent node should be assigned to the sum of the two symbols, and place the parent back into the list
   # delete the two children that were used for the list
+
+  node_lst = []
 
 
   end_time = time.perf_counter()
