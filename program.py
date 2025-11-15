@@ -1,11 +1,10 @@
-# reformat_program.py
-# By James Cam, 301562474
-
 import tkinter as tk
 from tkinter import filedialog, ttk
 from PIL import Image, ImageTk
 import numpy as np
 import time
+from collections import Counter
+import os
 
 # -- Classes --
 class Node:
@@ -70,12 +69,13 @@ def get_color_table(bmp_bytes, bpp):
 
 def browse_file():
   # we are only alowing the selections of .bmp files when pressing button. 
-  filepath = filedialog.askopenfilename(title="Select a .bmp file", filetypes=[("BMP files", "*.bmp")])
+  filepath = filedialog.askopenfilename(title="Select a .bmp file", filetypes=[("All files", "*.*"), ("BMP files", "*.bmp"), ("cmpt365 files", "*.cmpt365")])
   if filepath:
     file_path_entry.delete(0, tk.END)
     file_path_entry.insert(0, filepath)
 
 def open_file():
+  global bmp_bytes_global
   # checks the header of a .bmp and .cmpt365 file to choose how to handle it
   if (file_path_entry.get() == ""):
     return # if no file is there currently, just dont do anything
@@ -84,10 +84,10 @@ def open_file():
     bytes = f.read()
 
   file_type = get_file_type(bytes)
-  if file_type == 19778:
+  if file_type == 19778: # for BM in hex (little endian)
     bmp_bytes_global = bytes
     parse_bmp_file(bytes)
-  elif file_type == 123: #change value later for .cmpt365
+  elif file_type == 19784: # for HM in hex
     decompress(bytes)
   else:
     bmp_bytes_global = 0
@@ -101,6 +101,8 @@ def open_file():
     return
 
 def parse_bmp_file(bmp_bytes):
+  global original_size
+  global bmp_bytes_global
   #track original file size for compression
   original_size = get_file_size(bmp_bytes)
   bmp_bytes_global = bmp_bytes
@@ -232,16 +234,13 @@ def display_image(bmp_bytes):
   y = (c_height - height) // 2
   image.create_image(x, y, anchor=tk.NW, image=img)
     
-def compress(bmp_bytes):
-  # 0 is nothing, if 0 do not compress the image
-  start_time = time.perf_counter()
-
-  if bmp_bytes_global == 0:
-    return 
-
-  data_offset = get_data_offset(bmp_bytes)
-  header = bmp_bytes[:data_offset]
-  pixels = bmp_bytes[data_offset:]
+def compress(output_name):
+  global original_size
+  global bmp_bytes_global
+  global end_time
+  global total_time
+  global compressed_size
+  global start_time
   # alg:
   # init: put symbols in a sorted list according to their frequency count
   # repeat:
@@ -249,17 +248,182 @@ def compress(bmp_bytes):
   # the parent node should be assigned to the sum of the two symbols, and place the parent back into the list
   # delete the two children that were used for the list
 
-  node_lst = []
+  # 0 is nothing, if 0 do not compress the image
+  if bmp_bytes_global == 0:
+    file_path_entry.insert(0, "Please input a .bmp file to compress, to compress you must display the image first.")
+    return 
+
+  # grab pixels and header
+  data_offset = get_data_offset(bmp_bytes_global)
+  header = bmp_bytes_global[:data_offset]
+  pixels = bmp_bytes_global[data_offset:]
+  
+  # count frequency
+  frequency = Counter(pixels)
+  nodes = []
+  for s, c in frequency.items():
+    nodes.append((Node(s, c), c))
+  nodes.sort(key=lambda x: x[1])
+
+  # take smallest two nodes, place into parent and back to list
+  # should follow example like in class since the second pop will go on the right where its always the biggest
+  while len(nodes) > 1:
+    (n1, c1) = nodes.pop(0)
+    (n2, c2) = nodes.pop(0)
+    p = Node(None, c1+c2, n1, n2)
+    nodes.append((p, p.weight))
+    nodes.sort(key=lambda x: x[1])
+  
+  root = nodes[0][0]
+
+  # map symbols to code
+  codes = {}
+  codes_len = {}
+
+  def assign(node, bitstr):
+    print(bitstr)
+    if node.symbol is not None:
+      codes[node.symbol] = bitstr
+      codes_len[node.symbol] = len(bitstr)
+      return
+    assign(node.left, bitstr + "0")
+    assign(node.right, bitstr + "1")
+
+  assign(root, "")
+
+  # get max code length
+  l_max = max(codes_len.values())
+
+  # create one big string for the pixels
+  bitstring = "".join(codes[b] for b in pixels)
+  padding = (8 - (len(bitstring) % 8)) % 8
+  bitstring += "0" * padding
+
+  compressed_pixels = bytearray(int(bitstring[i:i+8], 2) for i in range(0, len(bitstring), 8))
+
+  # create the new file with the .cmpt365 extension
+  with open(output_name + ".cmpt365", "wb") as f:
+    f.write(b"HM")                                            # HM in hex
+    f.write(len(bmp_bytes_global).to_bytes(4, 'little'))      # original size of bmp
+    f.write(len(header).to_bytes(4, 'little'))                # original header len
+    f.write(header)                                           # original header
+    f.write(l_max.to_bytes(1, 'little'))                      # max bits length
+    f.write(len(codes).to_bytes(2, 'little'))                 # number of symbols/codes
+
+    # each symbol + code length + the bits
+    for s, c in codes.items():                       
+      f.write(s.to_bytes(1, 'little'))                                # symbol
+      f.write(codes_len[s].to_bytes(1, 'little'))                     # code length
+      f.write(int(c, 2).to_bytes((codes_len[s] + 7) // 8, 'big'))     # bits
+
+    # padding bytes
+    f.write(padding.to_bytes(1, 'little'))
+    f.write(compressed_pixels)
+
+  end_time = time.time() * 1000
+  total_time = end_time - start_time
+
+  compressed_size = os.path.getsize(output_name + ".cmpt365")
+
+  orig_size.config(text=f"{original_size} bytes")
+  comp_size.config(text=f"{compressed_size} bytes")
+  comp_ratio.config(text=f"{original_size/compressed_size}")
+  comp_time.config(text=f"{total_time} ms")
 
 
-  end_time = time.perf_counter()
-  total_time = start_time - end_time
-  return
+def run_compression():
+  global start_time
+  start_time = time.time() * 1000
+  file_name = os.path.basename((file_path_entry.get().split(".", 1))[0]) # grab file name without extension
+  compress(file_name)
 
 def decompress(cmpt365_bytes):
-  return
+  global bmp_bytes_global
 
-# -- layout and main loop -- 
+  ind = 2 # since 0-1 are for HM which was checked before calling
+
+  # original size
+  orig_size = int.from_bytes(cmpt365_bytes[ind:ind+4], "little")
+  ind += 4
+
+  # original header length
+  header_len = int.from_bytes(cmpt365_bytes[ind:ind+4], "little")
+  ind += 4
+
+  # original header when reconstructing
+  header = cmpt365_bytes[ind:ind+header_len]
+  ind += header_len
+
+  # calculate table size
+  l_max = cmpt365_bytes[ind]
+  ind += 1
+  table_size = 1 << l_max # calculate the max size of the table based on length
+
+  num_symbols = int.from_bytes(cmpt365_bytes[ind:ind+2], "little")
+  ind += 2
+
+  codes = {}
+
+  for _ in range(num_symbols):
+    s = cmpt365_bytes[ind]
+    ind += 1
+    l = cmpt365_bytes[ind]
+    ind += 1
+    num_bytes = (l + 7)//8
+    code_bits = cmpt365_bytes[ind:ind+num_bytes]
+    ind += num_bytes
+    code_int = int.from_bytes(code_bits, 'big')
+    code_str = bin(code_int)[2:].zfill(num_bytes*8)[-l:]
+    codes[code_str] = s
+
+  # pad
+  padding = cmpt365_bytes[ind]
+  ind += 1
+
+  payload = cmpt365_bytes[ind:]
+  bitstring = "".join(bin(b)[2:].zfill(8) for b in payload)
+  if padding:
+    bitstring = bitstring[:-padding]
+
+  # Huff decoder
+  huff_dec = [None] * table_size
+
+  for code_str, s in codes.items():
+    l = len(code_str)
+    code_int = int(code_str, 2) if l > 0 else 0
+    start = code_int << (l_max - l)
+    stop = (code_int + 1) << (l_max - l)
+    for i in range(start, stop):
+      huff_dec[i] = (s, l)
+  
+  # decode huffman
+  ind = int(bitstring[:l_max], 2)
+  pos = l_max
+  decoded = bytearray()
+  mask = (1 << l_max) - 1
+
+  while pos <= len(bitstring):
+    s, l = huff_dec[ind]
+    if l == 0:
+      break
+    decoded.append(s)
+
+    if pos + l > len(bitstring): 
+      break
+    
+    next_bits = int(bitstring[pos:pos+l], 2)
+    pos += l
+
+    ind = ((ind << l) | next_bits) & mask
+
+  reconstructed = header + decoded
+  bmp_bytes_global = reconstructed
+
+  display_image(reconstructed)
+
+
+
+# -- Tkinter layout + main loop -- 
 
 
 # Initialize root
@@ -338,7 +502,23 @@ bits_per_pixel.grid(row=8, column=1, padx=10, pady=10)
 
 # Compression Data Comparison
 # Compression button (Row 9)
-tk.Button(second_frame, text="Compress", command="").grid(row=9, column=1, padx=10, pady=10)
+tk.Button(second_frame, text="Compress", command=run_compression).grid(row=9, column=1, padx=10, pady=10)
+# Original BMP file size (Row 10)
+tk.Label(second_frame,text="Original file size:").grid(row=10, column=0, padx=10, pady=10)
+orig_size = tk.Label(second_frame, text="")
+orig_size.grid(row=10, column=1, padx=10, pady=10)
+# Comperssed file size (Row 11)
+tk.Label(second_frame,text="Compressed file size:").grid(row=11, column=0, padx=10, pady=10)
+comp_size = tk.Label(second_frame, text="")
+comp_size.grid(row=11, column=1, padx=10, pady=10)
+# Compression ratio (Row 12)
+tk.Label(second_frame,text="Compression ratio:").grid(row=12, column=0, padx=10, pady=10)
+comp_ratio = tk.Label(second_frame, text="")
+comp_ratio.grid(row=12, column=1, padx=10, pady=10)
+# Compression time in ms (Row 13)
+tk.Label(second_frame,text="Compression time").grid(row=13, column=0, padx=10, pady=10)
+comp_time = tk.Label(second_frame, text="")
+comp_time.grid(row=13, column=1, padx=10, pady=10)
 
 
 root.mainloop()
